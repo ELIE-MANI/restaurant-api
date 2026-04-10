@@ -1,0 +1,8 @@
+const {DataTypes} = require('sequelize');
+const sequelize = require('../config/database');
+
+const MenuItem = sequelize.define('MenuItem', {
+    name: DataTypes.STRING,
+    price: DataTypes.FLOAT  
+});
+module.exports = MenuItem;
