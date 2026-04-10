@@ -3,6 +3,47 @@ const router = express.Router();
 
 const { Order, MenuItem, OrderItem, Customer } = require("../models");
 
+/**
+ * @swagger
+ * /restaurants/{id}/orders:
+ *   get:
+ *     summary: Get all active orders for a restaurant
+ *     description: Retrieve all active orders for a specific restaurant with associated menu items
+ *     tags:
+ *       - Orders
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Restaurant ID
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved orders
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   order_id:
+ *                     type: integer
+ *                   items:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         item:
+ *                           type: string
+ *                         price:
+ *                           type: number
+ *                         quantity:
+ *                           type: integer
+ *       500:
+ *         description: Failed to fetch orders
+ */
 router.get("/restaurants/:id/orders", async (req, res) => {
   const restaurantId = req.params.id;
 
@@ -38,8 +79,181 @@ router.get("/restaurants/:id/orders", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /orders/{id}:
+ *   get:
+ *     summary: Get a specific order by ID
+ *     description: Retrieve order details including status and associated menu items with quantities
+ *     tags:
+ *       - Orders
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Order ID
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved order
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 order_id:
+ *                   type: integer
+ *                   description: Unique order identifier
+ *                 status:
+ *                   type: string
+ *                   enum: [active, completed, cancelled]
+ *                   description: Current order status
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       item:
+ *                         type: string
+ *                         description: Menu item name
+ *                       price:
+ *                         type: number
+ *                         description: Item price in dollars
+ *                       quantity:
+ *                         type: integer
+ *                         description: Quantity ordered
+ *       404:
+ *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Failed to fetch order
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+// get one order by id
+router.get("/orders/:id", async (req, res) => {
+    try{
+        const orderId = req.params.id;
+
+        const order = await Order.findOne({
+            where: {id: orderId},
+            include: [
+                {
+                    model: MenuItem,
+                    attributes: ['name', 'price'],
+                    through: {attributes: ['quantity']}
+                },
+            ]
+        });
+        if(!order){
+            return res.status(404).json({message: "Order not found"});
+        }
+
+        const formatted = {
+            order_id: order.id,
+            status: order.status,
+            items: order.MenuItems.map(item => ({
+                item: item.name,
+                price: item.price,
+                quantity: item.OrderItem.quantity
+            }))
+        };
+        res.json(formatted);
+    }catch(error){
+        console.error(error);
+        res.status(500).json({error: "Failed to fetch order"});
+    }
+});
 // Create a new  order
 
+/**
+ * @swagger
+ * /orders:
+ *   post:
+ *     summary: Create a new order
+ *     description: Creates a new order for a customer at a restaurant with specified menu items
+ *     tags:
+ *       - Orders
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - customerId
+ *               - restaurantId
+ *               - items
+ *             properties:
+ *               customerId:
+ *                 type: integer
+ *                 description: ID of the customer placing the order
+ *               restaurantId:
+ *                 type: integer
+ *                 description: ID of the restaurant
+ *               items:
+ *                 type: array
+ *                 description: Array of menu items to order
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - menuItemId
+ *                     - quantity
+ *                   properties:
+ *                     menuItemId:
+ *                       type: integer
+ *                       description: ID of the menu item
+ *                     quantity:
+ *                       type: integer
+ *                       description: Quantity of the item to order
+ *           example:
+ *             customerId: 1
+ *             restaurantId: 1
+ *             items:
+ *               - menuItemId: 1
+ *                 quantity: 2
+ *               - menuItemId: 3
+ *                 quantity: 1
+ *     responses:
+ *       201:
+ *         description: Order created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 orderId:
+ *                   type: integer
+ *                   description: ID of the newly created order
+ *       400:
+ *         description: Invalid request - missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Failed to create order
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 error:
+ *                   type: string
+ */
 router.post("/orders", async (req, res) => {
   try {
     const { customerId, restaurantId, items } = req.body;
@@ -69,6 +283,162 @@ router.post("/orders", async (req, res) => {
       .status(500)
       .json({ message: "Failed to create order", error: error.message });
   }
+});
+
+/**
+ * @swagger
+ * /orders/{id}:
+ *   put:
+ *     summary: Update order status
+ *     description: Update the status of an existing order (active, completed, or cancelled)
+ *     tags:
+ *       - Orders
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Order ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, completed, cancelled]
+ *                 description: New order status
+ *           example:
+ *             status: completed
+ *     responses:
+ *       200:
+ *         description: Order status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 order:
+ *                   $ref: '#/components/schemas/Order'
+ *       400:
+ *         description: Invalid status value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Failed to update order
+ */
+router.put("/orders/:id", async (req, res) => {
+  try {
+    const { status } = req.body;
+    const orderId = req.params.id;
+
+    const validStatuses = ["active", "completed", "cancelled"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid status value" });
+    }
+
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    await order.update({ status });
+    res.json({ message: "Order status updated successfully", order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to update order", message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /orders/{id}:
+ *   delete:
+ *     summary: Delete an order
+ *     description: Cancel and remove an order from the system
+ *     tags:
+ *       - Orders
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Order ID
+ *     responses:
+ *       200:
+ *         description: Order deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Failed to delete order
+ */
+router.delete("/orders/:id", async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    await order.destroy();
+    res.json({ message: "Order deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete order", message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     description: Check if the API server is running and database is connected
+ *     tags:
+ *       - System
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 message:
+ *                   type: string
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
+router.get("/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    message: "Restaurant API is running", 
+    timestamp: new Date().toISOString() 
+  });
 });
 
 module.exports = router;
