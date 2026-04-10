@@ -1,4 +1,4 @@
-const sequilize = require('../config/database');
+const sequelize = require('../config/database');
 // Import models
 const Restaurant = require('./Restaurant');
 const MenuItem = require('./MenuItem');
@@ -20,7 +20,7 @@ Order.belongsToMany(MenuItem, { through: OrderItem });
 MenuItem.belongsToMany(Order, { through: OrderItem });
 
 module.exports = {
-    
+     sequelize,
     Restaurant,
     MenuItem,
     Customer,

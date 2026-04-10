@@ -9,7 +9,7 @@ router.get('/restaurants/:id/orders', async (req, res) => {
     try {
         const orders = await Order.findAll({
             where:{
-                restaurantId: restaurantId,
+                RestaurantId: restaurantId,
                 status: 'active'
             },
             include: [
@@ -30,7 +30,7 @@ router.get('/restaurants/:id/orders', async (req, res) => {
          quantity: item.OrderItem.quantity
         }))
      }));
-     
+
         res.json(formatted);
     }
        
