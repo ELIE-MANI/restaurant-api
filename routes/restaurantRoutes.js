@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const {Restaurant} = require('../models')
+const restaurantSchema = require('../validators/restaurantValidator');
 
 /**
  * @swagger
@@ -22,7 +23,9 @@ const {Restaurant} = require('../models')
  *             properties:
  *               name:
  *                 type: string
- *                 description: The name of the restaurant
+ *                 minLength: 3
+ *                 maxLength: 100
+ *                 description: The name of the restaurant (must be 3-100 characters)
  *                 example: "Mario's Italian Kitchen"
  *     responses:
  *       201:
@@ -53,7 +56,7 @@ const {Restaurant} = require('../models')
  *                       format: date-time
  *                       description: Timestamp when the restaurant was last updated
  *       400:
- *         description: Bad request - missing required fields
+ *         description: Bad request - validation errors
  *         content:
  *           application/json:
  *             schema:
@@ -61,7 +64,7 @@ const {Restaurant} = require('../models')
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Name is required"
+ *                   example: "\"name\" length must be at least 3 characters long"
  *       500:
  *         description: Internal server error
  *         content:
@@ -75,13 +78,15 @@ const {Restaurant} = require('../models')
  */
 router.post('/', async (req,res) => {
     try {
-        const {name} = req.body
+        const {error} = restaurantSchema.validate(req.body);
 
-        if(!name) {
-            return res.status(400).json({message: 'Name is required'});
+        if(error) {
+            return res.status(400).json({
+                message: error.details[0].message
+            });
         }
 
-        const restaurant = await Restaurant.create({name});
+        const restaurant = await Restaurant.create(req.body);
         res.status(201).json({
             message: 'Restaurant created successfully',
             data: restaurant
@@ -171,10 +176,14 @@ router.get('/', async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
  *             properties:
  *               name:
  *                 type: string
- *                 description: The new name of the restaurant
+ *                 minLength: 3
+ *                 maxLength: 100
+ *                 description: The new name of the restaurant (must be 3-100 characters)
  *                 example: "Luigi's Italian Restaurant"
  *     responses:
  *       200:
@@ -204,6 +213,16 @@ router.get('/', async (req, res) => {
  *                       type: string
  *                       format: date-time
  *                       description: Timestamp when the restaurant was last updated
+ *       400:
+ *         description: Bad request - validation errors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "\"name\" length must be at least 3 characters long"
  *       404:
  *         description: Restaurant not found
  *         content:
@@ -229,8 +248,13 @@ router.get('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     try {
-        const {id} = req.params;
-        const {name} = req.body;
+        const {error} = restaurantSchema.validate(req.body);
+
+        if(error) { 
+            return res.status(400).json({
+                message: error.details[0].message
+            });
+        }     
 
         const restaurant = await Restaurant.findByPk(id);
 
@@ -240,9 +264,8 @@ router.put('/:id', async (req, res) => {
             });
 
         }
-        restaurant.name = name || restaurant.name;
 
-        await restaurant.save();
+        await restaurant.update(req.body);
 
         res.json({
             message: 'Restaurant updated successfully',

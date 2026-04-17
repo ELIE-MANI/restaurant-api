@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {MenuItem, Restaurant} = require('../models');
 const { where } = require('sequelize');
+const menuItemSchema = require('../validators/menuItemValidator');
 
 /**
  * @swagger
@@ -25,11 +26,14 @@ const { where } = require('sequelize');
  *             properties:
  *               name:
  *                 type: string
- *                 description: The name of the menu item
+ *                 minLength: 3
+ *                 maxLength: 100
+ *                 description: The name of the menu item (must be 3-100 characters)
  *                 example: "Pasta Carbonara"
  *               price:
  *                 type: number
- *                 description: The price of the menu item
+ *                 minimum: 0.01
+ *                 description: The price of the menu item (must be positive)
  *                 example: 12.99
  *               restaurantId:
  *                 type: integer
@@ -70,7 +74,7 @@ const { where } = require('sequelize');
  *                       format: date-time
  *                       description: Timestamp when the menu item was last updated
  *       400:
- *         description: Bad request - missing required fields
+ *         description: Bad request - validation errors
  *         content:
  *           application/json:
  *             schema:
@@ -78,7 +82,7 @@ const { where } = require('sequelize');
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Name, price, and restaurantId are required"
+ *                   example: "\"price\" must be a positive number"
  *       500:
  *         description: Internal server error
  *         content:
@@ -94,16 +98,16 @@ const { where } = require('sequelize');
 router.post('/', async (req,res) => {
 
 try {
-        const {name, price, restaurantId} = req.body
-    if (!name || !price || !restaurantId) {
-        return res.status(400).json({
-            message: 'Name, price, and restaurantId are required'
-        });
+   const {error} = menuItemSchema.validate(req.body);
+   if(error) {
+    return res.status(400).json({
+        message: error.details[0].message
+    });
     }
     const menuItem = await MenuItem.create({
-        name,
-        price,
-        RestaurantId: restaurantId
+        name: req.body.name,
+        price: req.body.price,
+        RestaurantId: req.body.restaurantId
     });
     res.status(201).json({
         message: 'Menu item created successfully',
@@ -214,14 +218,20 @@ router.get('/restaurant/:restaurantId', async (req,res) =>{
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - price
  *             properties:
  *               name:
  *                 type: string
- *                 description: The new name of the menu item
+ *                 minLength: 3
+ *                 maxLength: 100
+ *                 description: The new name of the menu item (must be 3-100 characters)
  *                 example: "Pasta Carbonara Deluxe"
  *               price:
  *                 type: number
- *                 description: The new price of the menu item
+ *                 minimum: 0.01
+ *                 description: The new price of the menu item (must be positive)
  *                 example: 14.99
  *     responses:
  *       200:
@@ -257,6 +267,16 @@ router.get('/restaurant/:restaurantId', async (req,res) =>{
  *                       type: string
  *                       format: date-time
  *                       description: Timestamp when the menu item was last updated
+ *       400:
+ *         description: Bad request - validation errors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "\"price\" must be a positive number"
  *       404:
  *         description: Menu item not found
  *         content:
@@ -282,18 +302,23 @@ router.get('/restaurant/:restaurantId', async (req,res) =>{
 // UPDATE MENU ITEM
 router.put('/:id', async (req,res) => {
     try {
-        const {id} = req.params;
-        const {name, price} = req.body;
-        const menuItem = await MenuItem.findByPk(id);
+        const {error} = menuItemSchema.validate(req.body);
+        if(error) {
+            return res.status(400).json({
+                message: error.details[0].message
+            });
+        } 
+        const menuItem = await MenuItem.findByPk(req.params.id);
         if (!menuItem) {
             return res.status(404).json({
                 message: 'Menu item not found'
             });
         }
-        menuItem.name = name || menuItem.name;
-        menuItem.price = price || menuItem.price;
-
-        await menuItem.save();
+        await menuItem.update({
+        name: req.body.name || menuItem.name,
+        price: req.body.price || menuItem.price
+        });
+        
         res.json({
             message: 'Menu item updated successfully',
             data: menuItem

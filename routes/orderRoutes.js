@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { Order, MenuItem, OrderItem, Customer } = require("../models");
-
+const orderSchema = require("../validators/orderValidator");
 /**
  * @swagger
  * /restaurants/{id}/orders:
@@ -196,13 +196,14 @@ router.get("/orders/:id", async (req, res) => {
  *             properties:
  *               customerId:
  *                 type: integer
- *                 description: ID of the customer placing the order
+ *                 description: ID of the customer placing the order (must be a positive integer)
  *               restaurantId:
  *                 type: integer
- *                 description: ID of the restaurant
+ *                 description: ID of the restaurant (must be a positive integer)
  *               items:
  *                 type: array
- *                 description: Array of menu items to order
+ *                 minItems: 1
+ *                 description: Array of menu items to order (must contain at least 1 item)
  *                 items:
  *                   type: object
  *                   required:
@@ -211,10 +212,11 @@ router.get("/orders/:id", async (req, res) => {
  *                   properties:
  *                     menuItemId:
  *                       type: integer
- *                       description: ID of the menu item
+ *                       description: ID of the menu item (must be a positive integer)
  *                     quantity:
  *                       type: integer
- *                       description: Quantity of the item to order
+ *                       minimum: 1
+ *                       description: Quantity of the item to order (must be a positive integer)
  *           example:
  *             customerId: 1
  *             restaurantId: 1
@@ -237,11 +239,39 @@ router.get("/orders/:id", async (req, res) => {
  *                   type: integer
  *                   description: ID of the newly created order
  *       400:
- *         description: Invalid request - missing required fields
+ *         description: Bad request - validation errors (invalid data types, missing required fields, or invalid values)
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               customerIdRequired:
+ *                 summary: Missing customerId
+ *                 value:
+ *                   message: "\"customerId\" is required"
+ *               restaurantIdRequired:
+ *                 summary: Missing restaurantId
+ *                 value:
+ *                   message: "\"restaurantId\" is required"
+ *               customerIdInvalid:
+ *                 summary: Invalid customerId type
+ *                 value:
+ *                   message: "\"customerId\" must be a number"
+ *               restaurantIdInvalid:
+ *                 summary: Invalid restaurantId type
+ *                 value:
+ *                   message: "\"restaurantId\" must be a number"
+ *               itemsMin:
+ *                 summary: Items array is empty
+ *                 value:
+ *                   message: "\"items\" must contain at least 1 items"
+ *               quantityPositive:
+ *                 summary: Quantity is not positive
+ *                 value:
+ *                   message: "\"items[0].quantity\" must be a positive number"
  *       500:
  *         description: Failed to create order
  *         content:
@@ -256,6 +286,21 @@ router.get("/orders/:id", async (req, res) => {
  */
 router.post("/orders", async (req, res) => {
   try {
+    const {error} = orderSchema.validate(req.body);
+    
+    if(error){
+        return res.status(400).json({
+          message: error.details[0].message});
+    }
+    const customer = await Customer.findByPk(customerId);
+    if(!customer){
+      return res.status(400).json({message: "Customer not found"});
+    }
+    
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if(!restaurant){
+      return res.status(400).json({message: "Restaurant not found"});
+    }
     const { customerId, restaurantId, items } = req.body;
 //Create order
     const order = await Order.create({
