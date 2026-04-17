@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const { Order, MenuItem, OrderItem, Customer } = require("../models");
-const orderSchema = require("../validators/orderValidator");
+const { Order, MenuItem, OrderItem, Customer, Restaurant } = require("../models");
+const {orderSchema, orderStatusSchema} = require("../validators/orderValidator");
+
 /**
  * @swagger
  * /restaurants/{id}/orders:
@@ -286,6 +287,9 @@ router.get("/orders/:id", async (req, res) => {
  */
 router.post("/orders", async (req, res) => {
   try {
+    const { customerId, restaurantId, items } = req.body;
+
+    // Validate request body
     const {error} = orderSchema.validate(req.body);
     
     if(error){
@@ -301,7 +305,7 @@ router.post("/orders", async (req, res) => {
     if(!restaurant){
       return res.status(400).json({message: "Restaurant not found"});
     }
-    const { customerId, restaurantId, items } = req.body;
+  
 //Create order
     const order = await Order.create({
       CustomerId: customerId,
@@ -485,5 +489,161 @@ router.get("/health", (req, res) => {
     timestamp: new Date().toISOString() 
   });
 });
+
+/**
+ * @swagger
+ * /orders/{id}/status:
+ *   patch:
+ *     summary: Update order status
+ *     description: Update the status of an existing order using PATCH method. Status must be one of active, completed, or cancelled.
+ *     tags:
+ *       - Orders
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the order to update
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, completed, cancelled]
+ *                 description: The new status for the order (must be one of active, completed, or cancelled)
+ *           examples:
+ *             completed:
+ *               summary: Mark order as completed
+ *               value:
+ *                 status: "completed"
+ *             cancelled:
+ *               summary: Mark order as cancelled
+ *               value:
+ *                 status: "cancelled"
+ *             active:
+ *               summary: Mark order as active
+ *               value:
+ *                 status: "active"
+ *     responses:
+ *       200:
+ *         description: Order status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Order status updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: Order ID
+ *                     CustomerId:
+ *                       type: integer
+ *                       description: Customer ID
+ *                     RestaurantId:
+ *                       type: integer
+ *                       description: Restaurant ID
+ *                     status:
+ *                       type: string
+ *                       enum: [active, completed, cancelled]
+ *                       description: Current order status
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp when the order was created
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp when the order was last updated
+ *       400:
+ *         description: Bad request - validation errors
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *             examples:
+ *               statusRequired:
+ *                 summary: Missing status field
+ *                 value:
+ *                   message: "\"status\" is required"
+ *               statusInvalid:
+ *                 summary: Invalid status value
+ *                 value:
+ *                   message: "\"status\" must be one of [active, completed, cancelled]"
+ *       404:
+ *         description: Order not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Order not found"
+ *       500:
+ *         description: Failed to update order status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 error:
+ *                   type: string
+ */
+// UPDATE STATUS ORDER
+
+router.patch('/orders/:id/status', async (req,res) => {
+  try {
+    const {id} = req.params;
+
+    // Validate request body
+    const {error} = orderStatusSchema.validate(req.body);
+    if(error){
+      return res.status(400).json({ 
+        message: error.details[0].message
+       });  
+    }
+    const {status} = req.body;
+
+    // Find the order by ID
+    const order = await Order.findByPk(id);
+
+    if(!order){
+      return res.status(404).json({message: "Order not found"});
+    }
+
+    // Update the order status
+    order.status = status;
+    await order.save();
+
+    res.json({
+      message: "Order status updated successfully",
+      data: order
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      message: "Failed to update order status",
+      error: error.message
+     });
+  }
+})
 
 module.exports = router;

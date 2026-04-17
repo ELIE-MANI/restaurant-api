@@ -38,7 +38,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(express.json());
-app.use('/orders', ordersRouter);
+app.use('/', ordersRouter);
 app.use('/menuItems', menuItemRoutes);
 app.use('/restaurants', restaurantRoutes);
 

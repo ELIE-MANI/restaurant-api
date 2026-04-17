@@ -22,8 +22,17 @@ const orderSchema = Joi.object({
         .required()
     }))
     .min(1)
-    .required()
+    .required(),
 
 });
 
-module.exports = orderSchema;
+const orderStatusSchema = Joi.object({
+    status: Joi.string()
+    .valid('active', 'completed', 'cancelled')
+    .required()
+});
+
+module.exports = {
+    orderSchema,
+    orderStatusSchema
+};
