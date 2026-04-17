@@ -190,6 +190,192 @@ router.get('/restaurant/:restaurantId', async (req,res) =>{
             message: 'Server error',
         });
     }
-})
+});
 
+/**
+ * @swagger
+ * /menuItems/{id}:
+ *   put:
+ *     summary: Update a menu item
+ *     description: Update an existing menu item's information by ID
+ *     tags:
+ *       - Menu Items
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the menu item to update
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The new name of the menu item
+ *                 example: "Pasta Carbonara Deluxe"
+ *               price:
+ *                 type: number
+ *                 description: The new price of the menu item
+ *                 example: 14.99
+ *     responses:
+ *       200:
+ *         description: Menu item successfully updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Menu item updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: Unique menu item identifier
+ *                     name:
+ *                       type: string
+ *                       description: Menu item name
+ *                     price:
+ *                       type: number
+ *                       description: Menu item price
+ *                     RestaurantId:
+ *                       type: integer
+ *                       description: Associated restaurant ID
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp when the menu item was created
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp when the menu item was last updated
+ *       404:
+ *         description: Menu item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Menu item not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 error:
+ *                   type: string
+ */
+// UPDATE MENU ITEM
+router.put('/:id', async (req,res) => {
+    try {
+        const {id} = req.params;
+        const {name, price} = req.body;
+        const menuItem = await MenuItem.findByPk(id);
+        if (!menuItem) {
+            return res.status(404).json({
+                message: 'Menu item not found'
+            });
+        }
+        menuItem.name = name || menuItem.name;
+        menuItem.price = price || menuItem.price;
+
+        await menuItem.save();
+        res.json({
+            message: 'Menu item updated successfully',
+            data: menuItem
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({  
+            message: 'Error updating menu item',
+            error: error.message
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /menuItems/{id}:
+ *   delete:
+ *     summary: Delete a menu item
+ *     description: Delete an existing menu item by ID
+ *     tags:
+ *       - Menu Items
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the menu item to delete
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Menu item successfully deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Menu item deleted successfully"
+ *       404:
+ *         description: Menu item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Menu item not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Error deleting menu item"
+ */
+// DELETE MENU ITEM
+router.delete('/:id', async (req,res) => {
+    try {
+        const {id} = req.params;
+        const menuItem = await MenuItem.findByPk(id);
+
+        if (!menuItem) {
+            return res.status(404).json({
+                message: 'Menu item not found'
+            });
+        }
+        await menuItem.destroy();
+        res.json({
+            message: 'Menu item deleted successfully'
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+             message: 'Error deleting menu item',   
+            
+        }); 
+    }
+});    
 module.exports = router;

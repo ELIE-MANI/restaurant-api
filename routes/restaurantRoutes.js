@@ -149,4 +149,179 @@ router.get('/', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /restaurants/{id}:
+ *   put:
+ *     summary: Update a restaurant
+ *     description: Update an existing restaurant's information by ID
+ *     tags:
+ *       - Restaurants
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the restaurant to update
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The new name of the restaurant
+ *                 example: "Luigi's Italian Restaurant"
+ *     responses:
+ *       200:
+ *         description: Restaurant successfully updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Restaurant updated successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: Unique restaurant identifier
+ *                     name:
+ *                       type: string
+ *                       description: Restaurant name
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp when the restaurant was created
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp when the restaurant was last updated
+ *       404:
+ *         description: Restaurant not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Restaurant not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+//UPDATE RESTAURANT
+
+router.put('/:id', async (req, res) => {
+    try {
+        const {id} = req.params;
+        const {name} = req.body;
+
+        const restaurant = await Restaurant.findByPk(id);
+
+        if (!restaurant) {
+            return res.status(404).json({
+                message: 'Restaurant not found'
+            });
+
+        }
+        restaurant.name = name || restaurant.name;
+
+        await restaurant.save();
+
+        res.json({
+            message: 'Restaurant updated successfully',
+            data: restaurant
+        });
+    } catch (error){
+        console.error('Error updating restaurant:', error);
+        res.status(500).json({message: 'Internal server error'});
+    }
+})
+
+/**
+ * @swagger
+ * /restaurants/{id}:
+ *   delete:
+ *     summary: Delete a restaurant
+ *     description: Delete an existing restaurant by ID
+ *     tags:
+ *       - Restaurants
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the restaurant to delete
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Restaurant successfully deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Restaurant deleted successfully"
+ *       404:
+ *         description: Restaurant not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Restaurant not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+// DELETE RESTAURANT
+
+router.delete('/:id', async (req, res) => {
+    try {
+        const {id} = req.params;
+        const restaurant = await Restaurant.findByPk(id);
+
+        if (!restaurant) {
+            return res.status(404).json({
+                message: 'Restaurant not found'
+            });
+        }
+        await restaurant.destroy();
+        res.json({
+            message: 'Restaurant deleted successfully'
+        });
+    } catch (error){
+        console.error('Error deleting restaurant:', error);
+        res.status(500).json({message: 'Internal server error'});
+    }
+});
+
 module.exports = router;
