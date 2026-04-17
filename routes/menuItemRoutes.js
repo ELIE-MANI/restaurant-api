@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const {MenuItem, Restaurant} = require('../models');
+const { where } = require('sequelize');
 
 /**
  * @swagger
@@ -116,5 +117,79 @@ try {
         });
     }
 });
+
+/**
+ * @swagger
+ * /menuItems/restaurant/{restaurantId}:
+ *   get:
+ *     summary: Get all menu items for a restaurant
+ *     description: Retrieve all menu items associated with a specific restaurant by its ID
+ *     tags:
+ *       - Menu Items
+ *     parameters:
+ *       - in: path
+ *         name: restaurantId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the restaurant
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved menu items
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: Unique menu item identifier
+ *                   name:
+ *                     type: string
+ *                     description: Menu item name
+ *                   price:
+ *                     type: number
+ *                     description: Menu item price
+ *                   RestaurantId:
+ *                     type: integer
+ *                     description: Associated restaurant ID
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: Timestamp when the menu item was created
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: Timestamp when the menu item was last updated
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error"
+ */
+// GET MENU ITEMS BY RESTAURANT ID
+router.get('/restaurant/:restaurantId', async (req,res) =>{
+    try{
+        const {restaurantId} = req.params;
+        const menuItems = await MenuItem.findAll({
+            where: {RestaurantId: restaurantId}
+        });
+        res.json(menuItems);
+
+    } catch (error){
+        console.error(error);
+        res.status(500).json({
+            message: 'Server error',
+        });
+    }
+})
 
 module.exports = router;

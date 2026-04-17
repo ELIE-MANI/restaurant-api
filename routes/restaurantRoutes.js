@@ -93,4 +93,60 @@ router.post('/', async (req,res) => {
     }
 });
 
+/**
+ * @swagger
+ * /restaurants:
+ *   get:
+ *     summary: Get all restaurants
+ *     description: Retrieve a list of all restaurants in the system
+ *     tags:
+ *       - Restaurants
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved all restaurants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: Unique restaurant identifier
+ *                   name:
+ *                     type: string
+ *                     description: Restaurant name
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: Timestamp when the restaurant was created
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: Timestamp when the restaurant was last updated
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+router.get('/', async (req, res) => {
+    try {
+        const restaurants = await Restaurant.findAll();
+        res.status(200).json({
+            message: 'Restaurants retrieved successfully',
+            data: restaurants
+        });
+    } catch (error) {
+        console.error('Error fetching restaurants:', error);
+        res.status(500).json({message: 'Internal server error'});
+    }
+});
+
 module.exports = router;
