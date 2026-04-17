@@ -8,6 +8,8 @@ const app = express();
 
 const {sequelize} = require('./models');
 const ordersRouter = require('./routes/orderRoutes');
+const menuItemRoutes = require('./routes/menuItemRoutes');
+const restaurantRoutes = require('./routes/restaurantRoutes');
 
 // Swagger configuration
 const swaggerOptions = {
@@ -36,7 +38,9 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(express.json());
-app.use('/', ordersRouter);
+app.use('/orders', ordersRouter);
+app.use('/menuItems', menuItemRoutes);
+app.use('/restaurants', restaurantRoutes);
 
 const PORT = process.env.PORT || 3000;
 sequelize.sync({force: false })
