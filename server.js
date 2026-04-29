@@ -43,13 +43,13 @@ app.use('/menuItems', menuItemRoutes);
 app.use('/restaurants', restaurantRoutes);
 
 const PORT = process.env.PORT || 3000;
-sequelize.sync({force: false })
+sequelize.authenticate()
 .then(() => {
-   console.log('Database synced');
+   console.log('Database connection has been established successfully.');
    app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`); 
     });
 })
 .catch(err => {
-    console.error('Unable to sync database:', err);
+    console.error('Unable to connect to the database:', err);
 });
