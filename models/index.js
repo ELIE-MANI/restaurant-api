@@ -7,14 +7,26 @@ const Order = require('./Order');
 const OrderItem = require('./OrderItem');
 
 //relationships
-Restaurant.hasMany(MenuItem);
-MenuItem.belongsTo(Restaurant);
+Restaurant.hasMany(MenuItem, {
+    foreignKey: 'restaurantId'
+});
+MenuItem.belongsTo(Restaurant, {
+    foreignKey: 'restaurantId'
+});
 
-Customer.hasMany(Order);
-Order.belongsTo(Customer);
+Customer.hasMany(Order, {
+    foreignKey: 'customerId'
+});
+Order.belongsTo(Customer, {
+    foreignKey: 'customerId'
+});
 
-Restaurant.hasMany(Order);
-Order.belongsTo(Restaurant);
+Restaurant.hasMany(Order, {
+    foreignKey: 'restaurantId'
+});
+Order.belongsTo(Restaurant, {
+    foreignKey: 'restaurantId'
+});
 
 Order.belongsToMany(MenuItem, { through: OrderItem });
 MenuItem.belongsToMany(Order, { through: OrderItem });

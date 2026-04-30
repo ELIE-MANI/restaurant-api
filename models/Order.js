@@ -6,5 +6,9 @@ const Order = sequelize.define('Order', {
         type: DataTypes.STRING,
         defaultValue: 'active'
     }
+}
+, {
+    tableName: 'Order',
+    freezeTableName: true
 });
 module.exports = Order;
